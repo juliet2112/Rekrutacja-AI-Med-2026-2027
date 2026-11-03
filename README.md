@@ -1,71 +1,62 @@
-# Medical & Statistical Machine Learning Pipelines
+# AI-MED AGH Recruitment — Machine Learning Projects
 
-This repository contains machine learning pipelines developed for the **AI-MED AGH** recruitment process. The project evaluates classical statistical learning on coordinate trajectory data and deep learning for multi-class peripheral blood cell classification, integrated with Explainable AI (XAI) for clinical interpretability.
+This repository contains two classification projects developed for the AI-MED AGH recruitment process. The PenDigits notebook compares five classifiers on handwritten digit trajectories. The BloodMNIST notebook trains a convolutional neural network and uses HiResCAM to investigate which image regions support different blood cell predictions.
 
----
+## 1. PenDigits — handwritten digit classification
 
-## 🛠 Tech Stack
+Each digit is represented by eight pairs of pen coordinates scaled to the range $[0, 100]$. The dataset contains 7,494 training examples and 3,498 test examples across 10 classes.
 
-* **Environment & Package Management:** `uv`, Python 3.14
-* **Deep Learning & Computer Vision:** PyTorch, torchvision, Optuna, OpenCV
-* **Statistical & Classical Machine Learning:** scikit-learn, XGBoost
-* **Data Processing & Analytics:** NumPy, Pandas, Matplotlib, Seaborn
+I compared multinomial logistic regression, a decision tree, a random forest, k-nearest neighbors, and XGBoost. I evaluated the models on both classification accuracy and inference time.
 
----
+| Model | Selected configuration |
+|---|---|
+| Multinomial logistic regression | L1 regularization, `C=50`, `saga` solver |
+| Decision tree | `max_depth=20`, `min_samples_split=2` |
+| Random forest | 500 trees, `max_depth=20`, `max_features=6` |
+| k-nearest neighbors | 3 neighbors, Manhattan distance |
+| XGBoost | 500 estimators, `max_depth=4`, `learning_rate=0.1` |
 
-## 🔬 Project Modules
+**k-nearest neighbors achieved the highest test accuracy (97.5%).** XGBoost reached **96.5%** and recorded an inference time below 13 ms in the notebook benchmark.
 
-### 1. PenDigits Classification (Statistical & Classical ML)
-* **Objective:** Benchmark classical statistical classifiers and evaluate the trade-off between model complexity, inference latency, and predictive performance.
-* **Dataset:** 16-dimensional coordinate trajectories normalized into $[0, 100]$ across 10 digit classes ($7\,494$ training and $3\,498$ test samples).
-* **Models Evaluated:**
-  * **Multinomial Logistic Regression:** `saga` solver, tuned with Stratified 5-Fold GridSearch (`C=50.0`, `penalty='l1'`).
-  * **Decision Tree Classifier:** Optimized with Stratified 5-Fold CV (`max_depth=20`, `min_samples_split=2`).
-  * **Random Forest Classifier:** Randomized Search tuning (`n_estimators=500`, `max_depth=20`, `max_features=6`).
-  * **$k$-Nearest Neighbors:** Distance metric optimization (`n_neighbors=3`, Manhattan distance) — **Top Accuracy: 97.5%**.
-  * **Gradient Boosting (`XGBClassifier`):** Fine-tuned tree depth and learning rate (`learning_rate=0.1`, `max_depth=4`, `n_estimators=500`) — **Best latency-accuracy trade-off: 96.5% accuracy, sub-13ms inference**.
+[Open the PenDigits notebook](./Zadanie-1/Rozwiązanie-1.ipynb)
 
-### 2. BloodMNIST Classification (Deep Learning & Computer Vision)
-* **Objective:** Classify 8 peripheral blood cell types from microscopic imagery and interpret internal network representations using model explainability.
-* **Dataset:** $11\,959$ training, $1\,712$ validation, and $3\,421$ test color images ($28 \times 28 \times 3$).
-* **Pipeline Highlights:**
-  * **Imbalance Mitigation:** Calculated inverse-frequency loss weighting integrated into `nn.CrossEntropyLoss`.
-  * **Data Augmentation:** Stochastic horizontal/vertical flips, affine rotations ($\pm 30^\circ$), and channel-wise normalization.
-  * **Automated Hyperparameter Tuning:** Automated search via **Optuna** across convolutional depths, channel counts, linear layer dimensions, dropout rates, and learning rate.
-  * **Evaluation Metrics:** **95.0% Accuracy**, **0.997 AUROC**, **94.6% Macro F1-score**.
-* **Model Explainability (Grad-CAM):**
-  * Implemented Gradient-weighted Class Activation Mapping on the final convolutional layer.
-  * Generated class-discriminative saliency maps superimposed over raw microscopic inputs to isolate morphological features (nuclear contours vs. cytoplasm) for both true positives and misclassifications.
+## 2. BloodMNIST — blood cell classification
 
----
+The task was to classify eight types of peripheral blood cells from **28 × 28 RGB images**. I used the official BloodMNIST split of 11,959 training images, 1,712 validation images, and 3,421 test images.
 
-## ⚙️ Setup & Execution
+I computed channel-wise normalization statistics on the training split and applied random flips and rotations during training. To account for differences in class frequency, I used weighted cross-entropy. Optuna selected the network depth, channel counts, hidden layer size, dropout rate, and learning rate based on validation accuracy. I then trained the selected two-block CNN on the combined training and validation sets and evaluated it on the held-out test set.
 
-### Prerequisites
-Ensure `uv` is installed on your system. If not, install it via:
+### Test results
+
+| Accuracy | Macro precision | Macro recall | Macro F1 | Macro AUROC (one-vs-rest) |
+|---:|---:|---:|---:|---:|
+| 95.03% | 0.9453 | 0.9491 | 0.9462 | 0.9973 |
+
+The model correctly classified **3,251 of 3,421 images**. Two error types accounted for 73 of the 170 mistakes: 42 images of class 6 were classified as class 3, and 31 images of class 3 were classified as class 5.
+
+### Visual explanations with HiResCAM
+
+I compared HiResCAM maps for correct and incorrect predictions. For selected mistakes, I generated two maps for the **same image**, one for the true class and one for the predicted class. This made it possible to compare the regions associated with each class score while keeping the input fixed.
+
+For example, on images 109 and 122, the class 3 map highlighted the interior of a dark-stained region, while the class 5 map highlighted parts of its boundary. A similar pattern appeared on a correctly classified image, so the location of the highlighted region alone could not explain the mistake. At this resolution, the maps also provide limited detail about the underlying cell structures.
+
+[Open the BloodMNIST notebook](./Zadanie-2A/Rozwiązanie-2A.ipynb)
+
+## Running the notebooks
+
+The project uses Python 3.14 and `uv`. To install the dependencies recorded in `uv.lock` and launch JupyterLab, run:
+
 ```bash
-brew install uv
+git clone https://github.com/juliet2112/Rekrutacja-AI-Med-2026-2027.git
+cd Rekrutacja-AI-Med-2026-2027
+uv sync --frozen
+uv run jupyter lab
 ```
 
-### Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/juliet2112/Rekrutacja-AI-Med-2026-2027.git
-   cd Rekrutacja-AI-Med-2026-2027
-   ```
+To reproduce the reported BloodMNIST results, run the data preparation cells and the model definition, then load `bloodmnist_model.pt` using the checkpoint cell before test evaluation. You can then run the metrics, confusion matrix, and HiResCAM cells without repeating the Optuna search or training. The original training run did not use a fixed random seed.
 
-2. Synchronize dependencies and virtual environment:
-   ```bash
-   uv sync
-   ```
+## Sources
 
-3. Run JupyterLab to explore and execute the notebooks:
-   ```bash
-   uv run jupyter lab
-   ```
-
----
-
-## 📚 References & Attribution
-* **Grad-CAM:** Selvaraju et al., *"Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization"*, ICCV 2017.
-* **Datasets:** Hugging Face Hub (`AI-MED-AGH/Recruitment-Task-1`), MedMNIST v2 (`bloodmnist`).
+- [PenDigits recruitment dataset](https://huggingface.co/datasets/AI-MED-AGH/Recruitment-Task-1)
+- [BloodMNIST recruitment dataset](https://huggingface.co/datasets/AI-MED-AGH/Recruitment-Task-2A)
+- Rachel Lea Draelos and Lawrence Carin, [*Use HiResCAM instead of Grad-CAM for faithful explanations of convolutional neural networks*](https://arxiv.org/abs/2011.08891).
